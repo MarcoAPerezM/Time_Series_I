@@ -1,0 +1,1729 @@
+---
+title: "Notas de Curso"
+subtitle: "Series de Tiempo I"
+author: "Marco Antonio Pérez-Méndez"
+date: "`r Sys.Date()`"
+output: 
+  html_document:
+    toc: true
+    toc_depth: 3
+    toc_float:
+      collapsed: true
+      smooth_scroll: true
+    number_sections: true
+    theme: sandstone
+    highlight: tango
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r include=FALSE}
+# automatically create a bib database for R packages
+knitr::write_bib(c(
+  .packages(), 'bookdown', 'knitr', 'rmarkdown'
+), 'packages.bib')
+```
+
+
+
+
+<!--chapter:end:index.Rmd-->
+
+---
+output:
+  pdf_document: default
+  html_document: default
+---
+
+
+# Introducción {#intro}
+
+El análisis de series de tiempo se configura como una herramienta fundamental entre el conjunto de herramientas con las que cuenta el economista moderno. El mercado laboral del economista demanda el uso de instrumentos analíticos que le permita realizar un diagnóstico preciso sobre los diferentes fenómenos económicos, políticos, sociales y financieros. En los tiempos modernos, las herramientas se enfocan, cada vez más, en un uso intensivo de datos acompañado de capacidades analíticas derivadas de la aplicación de la teoría económica. Entre estas se encuentra el modelado matemático de fenómenos y su correspondiente contrastación empírica. El análisis de series de tiempo está, entre las herramientas econométricas, ubicado como un conjunto de instrumentos que el mercado laboral demanda y valora en demasía. En este libro se encuentra el desarrollo de las series de tiempo univariadas. En el capítulo 1 se desarrollan las características de las series de tiempo, las herramientas básicas para su análisis y se esgrime la necesidad de desarrollar modelos sofisticados, pero sencillos, que permitan entender el pasado de los fenómenos y predecir su futuro. En el capítulo 2 se desarrolla el Modelo de Componentes Subyacentes: tendencia, ciclo y estacionalidad se modelan desde la perspectiva clásica. En el capítulo 3 se desarrollan filtros y suavizamientos. Medias móviles simples, exponenciales, etc. muestran como se comportan los fenómenos en el largo plazo. Se muestra como el filtro Holt-Winters permite reproducir con un alto grado de precisión los fenómenos con tendencia y estacionalidad y, además, permite obtener pronósticos altamente eficientes. En el capítulo 4 se desarrolla la metodología Box-Jenkins y se construyen los modelos tipo SARIMA. 
+
+
+## Requisitos
+
+Como es bien sabido, todo Análisis ecónomico de series de tiempo requiere de ciertos prerequisitos imprescindibles para poder desarollar el análisis en cuestión. En particular, este libro requiere el conocimiento y dominio de diferentes tópicos que le son imprescindibles al economista moderno. 
+
+En primera instancia, se encuentra el entendimiento de herramientas estadísticas y de probabilidad que se requieren, tanto para el desarrollo de instrumentos como de  indicadores que permitan reproducir los patrones de comportamiento subyacente de los fenómenos económicos, al mismo tiempo sirven para evaluar el grado de exactitud de sus reproducciones. 
+
+También se requiere el entedimiento, en un nivel básico, de teoría econométrica: estimación puntual, por intervalos, por cuantiles, etc. Técnicas de estimación de parámetros y modelado matemático. 
+
+## Datos económicos y financieros
+
+Otro de los requisitos fundamentales es saber identificar con precisión las fuentes de datos donde se encuentran las series de tiempo relevantes para el análisis económico. 
+
+Cuando el profesional cuenta con datos, tiene dos opciones: 1) la primera es cargar directamente en formato csv (Variables Separadas por Comas) y la segunda es cargarglos en formato xlsx (Excel).
+
+Para abrir datos en csv se debe emplear la función read.csv:
+
+```{r}
+#datos <- read.csv("dirección del archivo/archivo.csv, sep=";")
+#datos
+```
+
+Para abrir datos en Excel se debe emplear la función read_excel() perteneciente a la librería "readxl", así como indicar la hoja en la que se encuentran los datos:
+
+```{r}
+# install.packages("readxl")
+#library(readxl)
+#datos2 <-read_excel("/dirección/libro.xlsx", sheet="hoja")
+#datos2
+```
+
+Una manera mucho mas eficiente y moderna de obtener datos es descargarlos directamente desde repositorios oficiales en donde se encuentran los datos. Por ejemplo, la libreria Quantmod (<https://www.quantmod.com>. Quantitative Financial Modelling and Trading Framework for R)  brinda acceso a las bases de datos de Google, Yahoo, oanda y la FRED (Federal Reserve of Economic Data).
+
+Por ejemplo, por medio de la librería getFX() es posible descargar el tipo de cambio del peso mexicano contra el dolar estadounidense desde oanda:
+```{r}
+library(quantmod)
+getFX("USD/MXN")
+plot(USDMXN)
+```
+
+o el rublo ruso contra el dolar estadounidense:
+```{r}
+getFX("USD/RUB")
+plot(USDRUB)
+```
+
+o el precio del oro en relación con el dolar estadounidense:
+```{r}
+getFX("XAU/USD")
+plot(XAUUSD)
+```
+
+Con la función getSymbols() se puede desarcargar el Bitcoin desde la FRED, sólo basta con identificar la clave de la variable de interés, en este caso "CBBTCUSD":
+```{r}
+getSymbols("CBBTCUSD", src = "FRED") #source = src
+plot(CBBTCUSD)
+```
+
+## Descargar datos de INEGI
+
+En este caso, el interés principal se ecuentra en analizar series de tiempo mexicanas. Para ello, es necesario conectarse a la API de INEGI (Instituto Nacional de Geografía e Informática <https://www.inegi.org.mx/servicios/api_indicadores.html>). Una API (Interfaz de Programación de Aplicaciones) es, en términos generales, un conjunto de protocolos o reglas que permiten la interacción entre diferentes aplicaciones de software con el objetivo de que se comuniquen entre sí para intercambiar, principalmente, datos, características y funcionalidades. Para tener acceso a la API de INEGI es necesario solicitar una llave de acceso conocida como token. 
+
+```{r include=FALSE}
+token <- "6ddde00d-5372-2c45-7304-4f76bc7fe011"
+```
+
+Existe una librería que permite la conexión entre R y la API de INEGI. 
+
+```{r}
+library(inegiR)
+#token <- "token de INEGI"
+```
+
+Si es de nuestro interés analizar el comportamiento del Poducto Interno Bruto Trimestral, es necesario identificar su ubicación en el Banco de Información Económica. La ubicación exacta es Indicadores económicos de coyuntura > Producto interno bruto trimestral, base 2018 > Series Originales > Valores a precios de 2018. EL identificador del PIB trimestral es "735879". La función para realizar esta conexión es inegi_series(). Es necesario indicar el identificador de la variable, el token y la base de datos, la cual puede ser el Banco de Indicadores o el Banco de Información Económica. 
+
+```{r}
+inegi_id <- "735879"
+pib <- inegi_series(inegi_id, token, database = "BIE")
+```
+
+Como puede observarse, por medio de la función plot(), la descarga se realiza con el orden inverso, la tabla se encuentra ordenada de los valores más actuales a los más antiguos.
+```{r}
+plot(pib$values, type="l")
+```
+Es necesario verificar la primer fecha de publicación de la variable y la frecuencia con la que se repite dentro de un año. 
+
+```{r}
+tail(pib)
+```
+Como puede observarse, la fecha de inicio es el primer trimestre de 1980. Es necesario invertir el orden, para ello diseñamos una función que cambie el orden de acuerdo a la fecha y mantenga solo la columna de valores. A esta función personalizada la hemos llamado ts_invert().
+
+```{r}
+ts_invert <- function(x){
+  x <- x[order(x$date),]
+  x <- x$values
+}
+```
+Al aplicar esta función personalzida sobre la variable pib tenemos el orden adecuado
+
+```{r}
+pib <- ts_invert(pib)
+plot(pib, type="l")
+```
+Ahora es necesario transformar la variable en una serie de tiempo. Para ello usamos la función ts() la cual permite identificar la fecha de inico y la frecuencia. En este caso, la variable pib se transformará en una serie de tiempo que inicia en el primer trimestre de 1980 y tiene frecuencia 4, ya que es trimestral. 
+```{r}
+pib <- ts(pib, frequency = 4, start =c(1980,1) )
+ts.plot(pib)
+```
+
+
+## Indicadores de precisión
+
+Al momento de realizasr un análisis de series de tiempo siempre se va a cometer algún tipo de error. El más frecuente es el error de predicción o de estimación, este se define como la diferencia entre el valor observado y el valor estimado:
+
+$$\hat{e}_t = y_{t} − \hat{y}_t $$
+
+Estos errores son causados por un gran número de fuentes, por ejemplo, hay errores de medición en los procesos de recolección de las variables, hay errores de muestreo, hay errores derivados de la aleatoriedad del comportamiento humano, etc. 
+Estos errores pueden ser grandes y sistemáticos y esto depende, en gran medida de:
+
+**a)** Identificación errónea de los patrones subyacentes y relaciones entre variables. Podemos identificar, de manera equivocada, un patrón equivodado. También podemos construir un modelo estadístico basado en pocos datos y suponer que el patrón es estable a lo largo de mucho tiempo. 
+
+**b)** Patrones inexactos. En general, en las ciencias sociales y, en particular, en la Economía  los patronos que podemos identificar son, por naturaleza, inexactos e imprecisos. Esto se debe a que no es una ciencia determinista como la física o la quimica. Las relaciones económicas no son deterministas, son aleatorias y a pesar de que podemos identificar patrones de comportamiento estables en el tiempo, siempre habrá incertidumbre y múltiples factores que generan variaciones en los resultados. Por ejemplo, podemos construir un modelo que capture, relativamente bien, el ingreso de los hogares en México. Sin embargo, ¿cuántas variables se encuentran involucradas en el la determinación del ingreso de un hogar particular? Supongamos que el ingreso promedio de un hogar es de $12,000. ¿Cuántos hogares ganan esa cantidad? De dichos hogares, ¿cuántos tiene jefatura femenina? ¿Cuántos jefes de hogar tienen educación universitaria? etc. etc. Hay un gran número de variables involucradas en la determinación del ingreso, todas esas variables generan una fuerte variabilidad e impiden que el fenómeno sea determinista, por ello es imposible identificar con exactitud el ingreso de los hogares con base en un modelo estadístico o econométrico. Esta variación induce un error de estimación. 
+
+**c)** Cambios en los patrones. Siguiendo el ejemplo del ingreso de los hogares, un error común es suponer que los patrones que se identificaron en un momento en el tiempo serán los mismos durante un periodo de largo plazo. Esto no es necesariamente cierto, hay cambios en la estructura de los hogares, en la estructura productivia, en los niveles de educación y productividad, etc. Estos cambios inducen cambios en los patrones subyacentes de los fenómenos y por lo tanto en los parámetros de los modelos, a este dilema normalmente se le conoce como cambio estructural o paramétrico. 
+
+Por ello es necesario desarrollar herramientas que nos permitan identificar el grado de precisión de los modelos construidos. Para evaluar la precisión vamos a suponer que tenemos un fenómeno $y_t$ observado.
+
+```{r}
+y <- c(25,28,27,30,35,44,37,41,45)
+plot(y, type="l")
+```
+
+Vamos a suponer que tenemos dos modelos alternativos para reproducir y, eventualmente, predecir el fenómeno $y_t$.
+
+```{r}
+yp1 <- c(23,25,26,29,31,34,41,40,38,44)
+yp2 <- c(24,26,28,29,33,34,45,38,43,45)
+
+y <- ts(y)
+yp1 <- ts(yp1)
+yp2 <- ts(yp2)
+
+ts.plot(y,yp1,yp2, col=1:3)
+```
+
+
+```{r}
+error1 <- y-yp1
+error2 <- y-yp2
+```
+
+### Error Medio Absoluto
+
+$$ EMA =\frac{1}{T}  \Sigma_{t=1}^T | e_t |$$
+El EMA es una medida de precisión general que brinda una idea del grado de dispersión y cuenta con la característica de que le brinda la misma importancia a todos los errores.
+
+```{r}
+ema_1 <- (sum(abs(error1)))/length(y)
+ema_1
+```
+
+Construimos funciones personalizadas para cada indicador.
+```{r}
+ema <- function(x){
+  l <- length(x)
+  s <- sum(abs(x))
+  s/l
+}
+
+ema(error1)
+ema(error2)
+```
+
+### Error cuadrático medio 
+
+Es una medida de precisión que indica que tan dis perso está el modelo de los datos reales  pero cuenta con la característica de brindarle mayor peso a los errores más grandes
+
+$$ ECM= \frac{1}{T}\Sigma_{t=1}^T(e_t)^2 $$
+
+
+```{r}
+ecm <- function(x){
+  l <- length(x)
+  s <- sum(x^2)
+  s/l
+}
+
+ecm(error1)
+ecm(error2)
+```
+
+
+### Error medio absoluto porcentual
+
+Es la medida relativa del EMA
+
+$$ EMAP= \frac{1}{T}\Sigma_{t=1}^T\frac{|e_t|}{y_t}\times100 $$ 
+```{r}
+emap <- function(x,y){
+  l <- length(x)
+  s <- sum(abs(x)/y)*100
+  s/l
+}
+emap(error1,y)
+emap(error2,y)
+```
+
+
+### Raíz del error cuadrático  medio porcentual
+
+$$ ECMP= \sqrt{\frac{1}{T}\sum_{t=1}^T \left(\frac{e_t}{y_t} \right)^2}\times 100 $$ 
+
+
+```{r}
+ecmp <- function(x,y){
+  l <- length(x)
+  s <- (sum(x/y)^2)
+  ss <- sqrt(s/l)*100
+  ss
+}
+ecmp(error1,y)
+ecmp(error2,y)
+```
+
+### U de Theil 
+
+$$U = \sqrt{\frac{\frac{1}{T}\sum_{t=1}^Te_t^2}{\frac{1}{T}\sum_{t=1}^Ty_t^2}} $$
+
+```{r}
+UTheil <- function(x,y){
+  s <- (sum(x)^2)/(sum(y)^2)
+  ss <- sqrt(s)
+  ss
+}
+UTheil(error1,y)
+UTheil(error2,y)
+```
+
+### Función agrupada
+
+```{r}
+ts_precision <- function(x, y, 
+                         type = c("ecm", "ecmp", "ema", "emap", 
+                                  "UTheil"),
+                         na.rm = TRUE)
+{
+  switch(match.arg(type),
+  ecm = ecm(x),
+  ema = ema(x),
+  emap = emap(x, y),
+  ecmp = ecmp(x, y),
+  UTheil=UTheil(x,y))
+}
+ema <- function(x){
+  l <- length(x)
+  s <- sum(abs(x))
+  s/l
+}
+ecm <- function(x){
+  l <- length(x)
+  s <- sum(x^2)
+  s/l
+}
+emap <- function(x,y){
+  l <- length(x)
+  s <- sum(abs(x)/y)*100
+  s/l
+}
+ecmp <- function(x,y){
+  l <- length(x)
+  s <- (sum(x/y)^2)
+  ss <- sqrt(s/l)*100
+  ss
+}
+UTheil <- function(x,y){
+  s <- (sum(x)^2)/(sum(y)^2)
+  ss <- sqrt(s)
+  ss
+}
+ts_precision(error1,y,type="ecm")
+```
+
+### Función conjunta
+
+Construimos una función que además de calcular todos los indicadores de precisión, los pone en una tabla comparativa.
+```{r}
+ts_precision_all <- function(x,y){
+  ema <- ts_precision(x,y,type="ema")
+  emap<- ts_precision(x,y,type="emap")
+  ecm <- ts_precision(x,y,type="ecm")
+  ecmp <- ts_precision(x,y,type="ecmp")
+  u <- ts_precision(x,y,type="UTheil")
+  tabla <- as.matrix(data.frame(ema, emap, ecm, ecmp, u))
+  colnames(tabla)<- c("EMA", "EMAP", "ECM", "ECMP", "UTheil")
+  knitr::kable(
+  tabla, booktabs = TRUE,
+  caption = "Indicadores de Precisión"
+)
+  
+}
+```
+
+```{r}
+ts_precision_all(error1, y)
+```
+
+```{r}
+ts_precision_all(error2, y)
+
+```
+
+
+<!--chapter:end:01-intro.Rmd-->
+
+---
+output:
+  pdf_document: default
+  html_document: default
+---
+#  Modelos de Patrones de Comportamiento Subyacentes
+
+Los modelos de series de tiempo de Patrones de Comportamiento Subyacente pretenden recoger las regularidades de la serie capturadas en el comportamiento de una variable a lo largo del tiempo. Descansab en la idea de que los componentes subyacentes se pueden reproducir y nos permiten analizar los datos observados. La metodología es muy básica: se observa un determinado fenóomeno, se analizan sus regularidades o patrones y se construyen modelos basados en dichas regularidades observadas. Descansan en la idea de que toda serie de tiempo se puede descomponer en diferentes elementos subyacentes que forman parte de la serie, de manera indirecta, y que pueden explicar su evolución, a lo largo del tiempo. Los Modelos del Componentes Subyacentes (MCS) no pretenden representar el proceso generador de datos sino, mas bien, describir, de manera muy general, las características fundamentales de las series. 
+
+La construcción de que una serie de tiempo se puede construir por elementos superpuestos no es nueva, ya en la edad media se preguntaban por que había fenómenos qe se repetían de manera regular en el tiempo.  El punto de partida para la construcción de este tipo de modelos es, por lo tanto, saber identificar la existencia de dichos patrones o regularidades. Este enfoque pretende clasificar los tipos de movimientos que caracterizan una serie de tiempo como tendencia, estacionalidad, ciclo e irregular. Estos cuatro componentes son considerados como los patrones de comportamiento subyacente.
+
+
+El objetivo del análisis de series de tiempo es dentificar los patrones subyacentes expresados en un modelo uniecuacional. 
+
+$$Y_t=f(T_t, C_t, E_t, I_t) $$
+El componente irregular $I_t$ representa todos los movimientos no sistmáticos de la serie a lo largo del tiempo. Son las perturbaciones aleatorias que se presentan en la vida cotidiana. Son impredecibles y en suma su efecto se anula entre ellas. La estacionalidad es un patrón que se reproduce al interior de un año y refleja los impulsos del fenómeno asociados con efectos  observados en diversas estaciones del año. El ciclo es un comportamiento de mediano plazo que, normalmente son obserbables en series con temporalidades superiores a un año.Por último, la tendencia refleja el comportamiento de largo plazo  y representa el movimiento general de la serie una vez que se han eliminado los otros tres efectos. 
+
+
+## Tendencia
+
+La tendencia se define como el comportamiento subyacente de largo plazo en un fenómeno temporal. Normalmente, se realizan ajustes de funciones matemáticas para representar los diferentes tipos de tendencia. 
+
+
+### Tendencia lineal
+
+Supongamos que estamos interesados en evaluar el comportamiento del Índice Nacional de Precios al Consumidor (INPC). El INPC se encuentra en el Banco de Información Económica del INEGI^[su ubicación específica es Indicadores económicos de coyuntura > Índices de precios > Índice nacional de precios al consumidor > Mensual > Índice] y su identificador es 628194.
+
+
+```{r}
+inegi_id <- "628194"
+INPC <- inegi_series(inegi_id, token, database = "BIE")
+INPC <- INPC[1:367,]
+INPC <- ts_invert(INPC)
+INPC <- ts(INPC, frequency = 12, start = c(1994,1))
+tail(INPC)
+```
+
+
+Como primer paso, observamos el fenómeno:
+
+```{r}
+ts.plot(INPC)
+```
+Como se puede apreciar, hay una línea con pocas variaciones. De manera tal que podemos plantear un modelo matemático que incluya la tendencia lineal $T_t$ y el componente irregular $I_t$.
+
+$$ Y_t = f(t_t, I_t)$$
+Si el modelo fuera aditivo, tomaría la siguiente forma
+
+$$Y_t= T_t+I_t$$
+En particular, el componente de tendencia puede ser modelado como una ecuación lineal con $\alpha$ como intercepto y $\beta$ como pendiente
+
+$$T_t= \alpha + \beta t $$
+En el contexto de las series de tiempo, el componente irregular se identifica con el término de perturbación estócastica, se llama innovación y su nomenclatura es $a_t$
+
+$$Y_t =\alpha + \beta t+a_t $$
+
+Para modelar la tendencia, es necesario construir la variable tiempo
+
+```{r}
+tiempo <- time(INPC)
+plot(tiempo)
+```
+
+
+$$y_t=\alpha+\beta t+\epsilon_t $$
+Para modelar la tendencia es necesario construir un modelo econométrico para la función lineal propuesta
+
+$$\hat{y_t}=\hat{\alpha}+\hat{\beta} t $$
+
+```{r}
+lm(INPC~tiempo)
+```
+
+
+```{r}
+mod0 <- lm(INPC~tiempo)
+summary(mod0)
+```
+
+
+```{r}
+smod0 <- summary(mod0)
+a <- coef(mod0)[[1]]
+a
+b <- coef(mod0)[[2]]
+b
+```
+
+
+```{r}
+plot(INPC)
+abline(a,b, col="salmon")
+```
+
+
+```{r}
+#install.packages("forecast")
+library(forecast)
+```
+
+
+```{r}
+tendenciaL <- ts(a+b*tiempo, frequency = 12, start = c(1994,1))
+pronostico <- forecast(tendenciaL, h=5)
+pronostico
+```
+
+
+
+```{r}
+plot(forecast(tendenciaL))
+```
+
+```{r}
+library(forecast)
+library(ggplot2)
+inpc <- window(INPC,start=c(1994,1))
+fit1 <- tendenciaL
+autoplot(inpc) +
+autolayer(pronostico, series="Pronóstico")+
+autolayer(fit1, series="Tendencia lineal") +
+  xlab("Año") +
+  ylab("INPC (índice)") +
+  ggtitle("Indice Nacional de Precios al Consumidor") +
+  guides(colour=guide_legend(title="Pronóstico"))
+```
+
+
+
+
+Del modelo se desprende que, _caeteris paribus_, el incremento mensual del Índice Nacional de Precios al Consumidor es de `r b` y cuenta con un intercepto de `r a`
+
+
+### Tendencia cuadrática
+
+Modelar una tendencia que , en principio, parece ser cuadrática. La variable es la Tasa de condiciones críticas de ocupación (TCCO) (Porcentaje), cuyo identificador es 444608
+
+```{r}
+inegi_id <- "444608"
+TCCO <- inegi_series(inegi_id, token, database = "BIE")
+TCCO <- ts_invert(TCCO)
+TCCO <- ts(TCCO, frequency = 12, start = c(2005,1))
+ts.plot(TCCO)
+```
+
+
+$$y_t=\beta_0+\beta_1 t+ \beta_3 t^2 +\epsilon_t$$
+
+
+```{r}
+tiempo <- time(TCCO)
+tiempo2 <- tiempo^2
+mod1 <- tslm(TCCO~tiempo+tiempo2)
+mod1a<- tslm(TCCO~trend+I(trend^2))
+b0<-coef(mod1)[[1]]
+b1<-coef(mod1)[[2]]
+b2<-coef(mod1)[[3]]
+tendenciaC <- b0+b1*tiempo+b2*tiempo2
+plot(tendenciaC, col="aquamarine2")
+```
+
+
+```{r}
+ts.plot(TCCO, tendenciaC, col=1:2)
+```
+```{r}
+plot(forecast(mod1a, h=12))
+```
+
+
+### Tendencia Cúbica
+
+Tasa de ocupación parcial y desocupación 1 (TOPD1) (Porcentaje), con identificador 444604
+```{r}
+inegi_id <- "444604"
+TOPD1 <- inegi_series(inegi_id, token, database = "BIE")
+TOPD1 <- ts_invert(TOPD1)
+TOPD1 <- ts(TOPD1, frequency = 12, start = c(2005,1))
+ts.plot(TOPD1)
+
+```
+
+
+```{r}
+tiempo <- seq(1, length(TOPD1), 1)
+tiempo2 <- tiempo^2
+tiempo3 <- tiempo^3
+mod3 <- lm(TOPD1~tiempo+tiempo2+tiempo3)
+mod3a <- tslm(TOPD1~trend++I(trend^2)++I(trend^3))
+summary(mod3)
+```
+
+
+```{r}
+b0 <- coef(mod3)[[1]]
+b1 <- coef(mod3)[[2]]
+b2 <- coef(mod3)[[3]]
+b3 <- coef(mod3)[[4]]
+tendencia <- b0+b1*tiempo+b2*tiempo2+b3*tiempo3
+ts.plot(TOPD1, tendencia, col=1:2)
+
+```
+```{r}
+forecast(tendencia, h=5)
+```
+
+```{r}
+plot(forecast(tendencia, h=12))
+```
+
+
+```{r}
+plot(forecast(mod3a, h=12))
+```
+
+
+### Tendencia Polinomial
+Tasa de presión general (TPRG) (Porcentaje),  444605
+polinomial
+```{r}
+inegi_id <- "444605"
+TPRG <- inegi_series(inegi_id, token, database = "BIE")
+TPRG <- ts_invert(TPRG)
+TPRG <- ts(TPRG, frequency = 12, start = c(2005,1))
+plot(TPRG, type="l")
+```
+
+
+```{r}
+tiempo <- seq(1, length(TPRG), 1)
+tiempo2 <- tiempo^2
+tiempo3 <- tiempo^3
+tiempo4 <- tiempo^4
+mod4 <- lm(TPRG~tiempo+tiempo2+tiempo3+tiempo4)
+mod4a <- tslm(TPRG~trend+I(trend^2)+I(trend^3)+I(trend^4))
+summary(mod4)
+```
+
+```{r}
+b0 <- coef(mod4)[[1]]
+b1 <- coef(mod4)[[2]]
+b2 <- coef(mod4)[[3]]
+b3 <- coef(mod4)[[4]]
+b4 <- coef(mod4)[[5]]
+tendencia <- b0+b1*tiempo+b2*tiempo2+b3*tiempo3+b4*tiempo4
+ts.plot(TPRG, tendencia, col=1:2)
+
+```
+
+```{r}
+plot(forecast(mod4a, h=12))
+```
+
+
+### Tendencia exponencial
+
+
+Finanzas públicas > Ingresos y egresos brutos por entidad federativa > Nacional 31 entidades federativas (no incluye Ciudad de México) > Ingresos > Impuestos Clave:441566
+```{r}
+inegi_id <- "441566"
+impuestos <- inegi_series(inegi_id, token, database = "BIE")
+impuestos <- ts_invert(impuestos)
+impuestos <- ts(impuestos, start = 1989)
+ts.plot(impuestos )
+```
+
+
+$$y_t=T_tI_t $$
+$$y_t=e^{\beta_0+\beta_1t}e^{a_t} $$
+$$y_t=e^{\beta_0+\beta_1t+a_t} $$
+$$ln(y_t)= \beta_0+\beta_1t+a_t $$
+
+```{r}
+limpuestos<- log(impuestos)
+tiempo <- time(impuestos)
+mod5 <- lm(limpuestos~tiempo)
+mod5a <- tslm(log(impuestos)~trend)
+```
+
+```{r}
+b0 <- coef(mod5)[[1]]
+b1 <- coef(mod5)[[2]]
+sub_tendencia <- b0+b1*tiempo
+tendencia <- exp(sub_tendencia)
+ts.plot(impuestos, tendencia, col=1:2)
+```
+
+```{r}
+plot(forecast(mod5a, h=4))
+```
+
+
+### Curvas de crecimiento
+
+```{r echo=FALSE}
+library(readr)
+mexicoc <- read_csv("~/Documents/libros/STI/covid/covid.csv")
+```
+
+```{r}
+dias <- seq(1,length(mexicoc$totales),1)
+totales <- mexicoc$totales
+datos <-data.frame(dias, totales)
+dias2 <- seq(1,387,1)
+totales2 <- mexicoc$totales[1:387]
+datos2 <-data.frame(dias2, totales2)
+```
+
+
+```{r}
+ajuste <-nls(totales~a*exp(-exp(-((dias-b)/c))), 
+             start=list(a=500000, b=100, c=4), trace = T)#      
+sajuste<- summary(ajuste)
+a<- sajuste$coefficients[1]
+b<- sajuste$coefficients[2]
+c<- sajuste$coefficients[3]
+c(a,b,c) 
+f<-seq(1,1000,1)
+contagiados<-a*exp(-exp(-((f-b)/c)))
+#format(contagiados, scientific=F) 
+options(scipen=999)
+contagiados <- ceiling(contagiados)
+plot(f,contagiados, type = "h", 
+     xlab = "Días", ylab = "Contagios acumulados", col="blue")
+```
+
+```{r}
+dias2 <- f
+contagios <- data.frame(dias2, contagiados)
+tail(contagios)
+```
+
+```{r}
+g <- data.frame(f, contagiados)
+dias3 <- d<-seq(1,length(mexicoc),1)
+totales3 <- c(contagiados[1:length(mexicoc)])
+datos3 <-data.frame(dias3, totales3)
+```
+
+```{r}
+library(ggplot2)
+ggplot(g, aes(x = f, y = contagiados, colour = "Curva Gompertz") ) +
+   geom_line()+ theme(legend.position = "bottom")+
+   geom_point(data = datos, aes(x=dias, y = totales), size = 1, color="orange")+ theme(legend.position = "bottom")+
+   #geom_line(data=deriv, aes(x=f1, y=derivada, color="brown"))+ 
+   xlab("Días desde el pacientel 0") + ylab("Número de contagios confirmados")+
+   ggtitle("Modelo de predicción de contagios confirmados de Covid-19.")+
+   labs(subtitle = "Ajuste de una función de crecimiento tipo Gompertz",
+   caption = "Elaborado por el Laboratorio de Desigualdad Socioeconómica Regional DeSERLab, UAM-I.")+ 
+   geom_hline(yintercept=3300000, color="red", show.legend =TRUE, linetype="dashed")+
+   geom_vline(xintercept=1000, color="red", show.legend=TRUE, linetype="dashed")+
+   annotate("text", x=250, y=3100000, label="Valor asintótico: 10,965,030")+
+   annotate("text", x=600, y=2000000, label="2024-02-19")+
+   annotate("text", x=650, y=2200000, label="Fecha probable del Plateau")
+```
+
+
+
+## Estacionalidad
+
+### Estacionalidad aditiva
+
+Comportamiento que se presenta de manera regular y sistemática 
+
+737124
+ 112 Cría y explotación de animales (Índice base 2018=100)
+Indicadores económicos de coyuntura > Indicador global de la actividad económica, base 2018 > Series originales > Índice de volumen físico > Actividades primarias
+estacionalidad aditiva
+```{r}
+inegi_id <- "737124"
+IVFEA <- inegi_series(inegi_id, token, database = "BIE")
+IVFEA <- ts_invert(IVFEA)
+IVFEA <- ts(IVFEA, frequency = 12, start = c(1993,1))
+ts.plot(IVFEA)
+```
+
+Seasonal Plot:
+
+```{r}
+library(ggplot2)
+ggseasonplot(IVFEA, year.labels=TRUE, year.labels.left=TRUE) +
+  ylab("Índice base 2018=100") +
+  ggtitle("Seasonal plot: Cría y explotación de animales")+
+  xlab("Mes")
+```
+
+Polar Seasonal Plot:
+
+```{r}
+ggseasonplot(IVFEA, polar=TRUE) +
+  ylab("Índice base 2018=100") +
+  ggtitle("Polar seasonal plot: Cría y explotación de animales")+
+  xlab("Mes")
+```
+
+Subseries Plot:
+```{r}
+ggsubseriesplot(IVFEA) +
+  ylab("Índice base 2018=100") +
+  ggtitle("Subseries seasonal plot: Cría y explotación de animales")+
+  xlab("Mes")
+```
+
+Lag plots
+
+```{r}
+ivfea <- window(IVFEA, start=1993)
+gglagplot(ivfea)
+
+```
+
+
+Here the colours indicate the quarter of the variable on the vertical axis. The lines connect points in chronological order. The relationship is strongly positive at lags 4 and 8, reflecting the strong seasonality in the data. The negative relationship seen for lags 2 and 6 occurs because peaks (in Q4) are plotted against troughs (in Q2)
+
+The window() function used here is very useful when extracting a portion of a time series. In this case, we have extracted the data from ausbeer, beginning in 1992.
+```{r}
+library(forecast)
+dummies <- seasonaldummy(IVFEA)
+head(dummies)
+
+```
+```{r}
+m6 <- lm(IVFEA~dummies)
+plot(m6$fitted.values, type="l")
+```
+
+```{r}
+ts.plot(IVFEA, m6$fitted.values, col=1:2)
+```
+
+```{r}
+m6a <- tslm(IVFEA~ trend + season)
+ts.plot(IVFEA, m6a$fitted.values, col=1:2)
+```
+
+
+```{r}
+plot(forecast(m6a, h=12))
+```
+
+### Estacionalidad multiplicativa
+
+ 737123
+ 111 Agricultura (Índice base 2018=100)
+Indicadores económicos de coyuntura > Indicador global de la actividad económica, base 2018 > Series originales > Índice de volumen físico > Actividades primarias
+estacionalidad multiplicativa
+
+```{r}
+inegi_id <- "737123"
+IVFAgr <- inegi_series(inegi_id, token, database = "BIE")
+IVFAgr <- ts_invert(IVFAgr)
+IVFAgr <- ts(IVFAgr, frequency = 12, start = c(1993,1))
+ts.plot(IVFAgr)
+```
+ 
+```{r}
+tiempo<- time(IVFAgr)
+dummies <- seasonaldummy(IVFAgr)
+mod7 <- lm(IVFAgr~tiempo+dummies)
+summary(mod7)
+```
+```{r}
+ts.plot(IVFAgr, mod7$fitted.values, col=1:2)
+```
+
+
+```{r}
+mod7a <- lm(log(IVFAgr)~tiempo+dummies)
+summary(mod7a)
+```
+
+
+```{r}
+ts.plot(IVFAgr, exp(mod7a$fitted.values), col=1:2)
+```
+lambda= Box-Cox transformation parameter. If lambda="auto", then a transformation is automatically selected using BoxCox.lambda. The transformation is ignored if NULL. Otherwise, data transformed before model is estimated.
+```{r}
+mod7b <- tslm(IVFAgr~trend+season, lambda = -0.6)
+ts.plot(IVFAgr,mod7b$fitted.values, col=1:2)
+```
+
+```{r}
+plot(forecast(mod7b, h=12))
+```
+
+
+## Ciclo
+
+Moviemiento de mediano plazo
+
+
+ 737126
+ 21 Minería (Índice base 2018=100)
+Indicadores económicos de coyuntura > Indicador global de la actividad económica, base 2018 > Series originales > Índice de volumen físico > Actividades secundarias
+
+```{r}
+inegi_id <- "737126"
+IVFMin <- inegi_series(inegi_id, token, database = "BIE")
+IVFMin <- ts_invert(IVFMin)
+IVFMin <- ts(IVFMin, frequency = 12, start = c(1993,1))
+ts.plot(IVFMin)
+```
+
+
+```{r}
+head(cycle(IVFMin),n=12)
+```
+
+```{r}
+aggregate.ts(IVFMin, FUN=mean)
+```
+
+```{r}
+plot(aggregate(IVFMin, FUN=mean))
+```
+
+
+
+```{r}
+boxplot(IVFMin~cycle(IVFMin))
+```
+
+
+
+```{r}
+plot(forecast(aggregate(IVFMin, FUN=mean),h=4))
+```
+
+
+
+
+
+
+<!--chapter:end:02-MCNO.Rmd-->
+
+---
+output:
+  pdf_document: default
+  html_document: default
+---
+# Descomposiciones, Filtros y Suavizamientos
+
+## Descomponer la serie en sus cuatro componentes
+
+
+ 778083 -778114
+ Aguascalientes (Índice de volumen físico 2018 = 100)
+Indicadores económicos de coyuntura > Indicador trimestral de la actividad económica estatal (ITAEE), base 2018 > Series Originales > Actividades primarias > 111-112 - Agricultura. Cría y explotación de animales > Índice
+```{r}
+inegi_id <- "778083"
+IVFEAgs <- inegi_series(inegi_id, token, database = "BIE")
+IVFEAgs <- ts_invert(IVFEAgs)
+IVFEAgs <- ts(IVFEAgs, frequency = 4, start = c(2003,1))
+ts.plot(IVFEAgs)
+```
+
+```{r}
+descomposicion <- decompose(IVFEAgs)
+head(descomposicion$seasonal)
+```
+
+```{r}
+head(descomposicion$trend)
+
+```
+
+```{r}
+head(descomposicion$random)
+
+```
+
+```{r}
+head(descomposicion$figure)
+```
+
+
+```{r}
+plot(descomposicion)
+```
+
+```{r}
+dummy <- descomposicion$seasonal
+tendencia <- descomposicion$trend
+y <- tendencia +dummy
+ts.plot(IVFEAgs,y, col=1:2)
+```
+
+```{r}
+descomposicion2 <- data.frame(cbind(l=log(IVFEAgs),
+                                    t=time(log(IVFEAgs)),
+                                    c=cycle(log(IVFEAgs)),
+                                    s=factor(descomposicion$seasonal)))
+mod8 <- lm(l~t+c+s, data=descomposicion2)
+smod8 <- summary(mod8)
+yhat <- mod8$fitted.values
+ts.plot(IVFEAgs, exp(yhat), col=1:2)
+```
+
+ 
+
+
+
+## Promedios Móviles
+
+
+SMA= Simple Moving Average
+EMA= Exponential Moving Average
+WMA = Weigthed Moving Average
+DEMA = Differential Exponential Moving Average 
+EVWMA = Elastic Volume Weigthed Moving Average
+ZLEMA = Zero Lag Exponential Moving Avergae
+WVMA = Volume Weigthed Moving Average
+HMA = Diferencia de dos WMA
+ALMA = Filtro GAussiano
+
+Precio de Apertura
+Precio de Cierre
+Precio Máximo
+Precio Mínimo
+Volumen
+
+```{r}
+library(TSA)
+#install.packages("TTR")
+library(TTR)
+data(airpass)
+ts.plot(IVFEAgs, SMA(IVFEAgs, n=10), col=1:2)
+```
+
+```{r}
+tail(SMA(IVFEAgs, n=10))
+```
+
+```{r}
+ts.plot(IVFEAgs, SMA(IVFEAgs, n=10),
+        SMA(IVFEAgs, n=3),
+        SMA(IVFEAgs, n=25),
+        SMA(IVFEAgs, n=40),col=1:5)
+
+```
+
+```{r}
+library(forecast)
+plot(forecast(SMA(IVFEAgs, n=5)))
+
+```
+
+
+## Filtros
+
+Official statistics agencies (such as the US Census Bureau and the Australian Bureau of Statistics) are responsible for a large number of official economic and social time series. These agencies have developed their own decomposition procedures which are used for seasonal adjustment. Most of them use variants of the X-11 method, or the SEATS method, or a combination of the two. These methods are designed specifically to work with quarterly and monthly data, which are the most common series handled by official statistics agencies. They will not handle seasonality of other kinds, such as daily data, or hourly data, or weekly data. We will use the latest implementation of this group of methods known as “X-13ARIMA-SEATS”. For the methods discussed in this section, you will need to have installed the seasonal package in R.
+
+X-11 method
+The X-11 method originated in the US Census Bureau and was further developed by Statistics Canada. It is based on classical decomposition, but includes many extra steps and features in order to overcome the drawbacks of classical decomposition that were discussed in the previous section. In particular, trend-cycle estimates are available for all observations including the end points, and the seasonal component is allowed to vary slowly over time. X-11 also handles trading day variation, holiday effects and the effects of known predictors. There are methods for both additive and multiplicative decomposition. The process is entirely automatic and tends to be highly robust to outliers and level shifts in the time series. The details of the X-11 method are described in Dagum & Bianconcini (2016).
+```{r}
+plot(IVFEAgs)
+```
+
+```{r}
+library(forecast)
+lambda <- BoxCox.lambda(IVFEAgs)
+IVFEAgs.fit <- ar(BoxCox(IVFEAgs,lambda))
+plot(forecast(IVFEAgs,h=20,lambda=lambda))
+
+```
+
+```{r}
+fit <- ets(IVFEAgs, model = "ZZZ", allow.multiplicative.trend = TRUE)
+plot(forecast(fit))
+
+
+```
+
+```{r}
+library(ggplot2)
+
+# Using Fourier series for a "ts" object
+# K is chosen to minimize the AICc
+IVFEAgs.model  <- auto.arima(IVFEAgs, xreg=fourier(IVFEAgs,K=2), seasonal=FALSE)
+IVFEAgs.fcast <- forecast(IVFEAgs.model, xreg=fourier(IVFEAgs, K=2, h=8))
+autoplot(IVFEAgs.fcast) + xlab("Year")
+```
+
+```{r}
+IVFEAgs.fcast <- rwf(IVFEAgs, h=4)
+plot(IVFEAgs.fcast)
+```
+
+```{r}
+plot(naive(IVFEAgs,h=8),include=200)
+```
+
+
+```{r}
+plot(snaive(IVFEAgs))
+```
+
+```{r}
+plot(ses(IVFEAgs))
+
+```
+
+```{r}
+fcast <- holt(IVFEAgs)
+plot(fcast)
+```
+
+```{r}
+
+IVFEAgs.fcast <- hw(IVFEAgs,h=8)
+plot(IVFEAgs.fcast)
+```
+
+```{r}
+fcast <- ets(IVFEAgs)
+plot(fcast)
+```
+
+```{r}
+HoltWinters(IVFEAgs)
+```
+
+```{r}
+plot(HoltWinters(IVFEAgs))
+```
+
+```{r}
+IVFEAgsHW <- HoltWinters(IVFEAgs)
+forecast(IVFEAgsHW)
+```
+```{r}
+plot(forecast(IVFEAgsHW))
+```
+
+
+
+```{r}
+library(quantmod)
+getFX("USD/MXN")
+plot(HoltWinters(USDMXN[,1], gamma = FALSE))
+```
+
+```{r}
+hh <- ts(USDMXN)
+hhh<- ts(hh[,1])
+plot(HoltWinters(hhh, gamma = FALSE))
+```
+
+```{r}
+plot(forecast(HoltWinters(hhh, gamma = FALSE)))
+```
+
+
+
+
+## Herramientas adicionales de pronóstico
+
+
+ 702255
+Total industrias manufactureras (Índice base 2018=100)
+Indicadores económicos de coyuntura > Encuesta mensual de la industria manufacturera (EMIM). Serie 2018 > Series Originales > Índices de remuneraciones medias reales por persona > Índice > Índice de salarios medios reales por obrero
+```{r}
+inegi_id <- "702255"
+ISMRO <- inegi_series(inegi_id, token, database = "BIE")
+ISMRO <- ts_invert(ISMRO)
+ISMRO <- ts(ISMRO, frequency = 12, start = c(2007,1))
+ts.plot(ISMRO)
+```
+
+
+
+```{r}
+ISMRO <- window(ISMRO,start=2007)
+ISMRO1 <- meanf(ISMRO,h=10)
+ISMRO2 <- rwf(ISMRO,h=10)
+ISMRO3 <- snaive(ISMRO,h=10)
+ISMRO4 <- croston(ISMRO,h=10)
+ISMRO5 <- stlf(ISMRO,h=10)
+ISMRO6 <- ses(ISMRO,h=10)
+ISMRO7 <- holt(ISMRO,h=10)
+ISMRO8 <- hw(ISMRO,h=10)
+ISMRO9 <- splinef(ISMRO,h=10)
+ISMRO10 <- thetaf(ISMRO,h=10)
+autoplot(window(ISMRO, start=2007)) +
+  autolayer(ISMRO1, series="Mean", PI=FALSE) +
+  xlab("Mes") + ylab("Índice base 2018=100") +
+  ggtitle("pronóstico de Índice de salarios medios reales por obrero") +
+  guides(colour=guide_legend(title="Pronóstico"))
+```
+
+```{r}
+autoplot(window(ISMRO, start=2007)) +
+  autolayer(ISMRO2, series="Naïve", PI=FALSE) +
+  xlab("Mes") + ylab("Índice base 2018=100") +
+  ggtitle("pronóstico de Índice de salarios medios reales por obrero") +
+  guides(colour=guide_legend(title="Pronóstico"))
+```
+
+
+```{r}
+autoplot(window(ISMRO, start=2007)) +
+  autolayer(ISMRO3, series="Seasonal naïve", PI=FALSE) +
+  xlab("Mes") + ylab("Índice base 2018=100") +
+  ggtitle("pronóstico de Índice de salarios medios reales por obrero") +
+  guides(colour=guide_legend(title="Pronóstico"))
+```
+ 
+```{r}
+autoplot(window(ISMRO, start=2007)) +
+  autolayer(ISMRO4, series="Croston´ Method", PI=FALSE) +
+  xlab("Mes") + ylab("Índice base 2018=100") +
+  ggtitle("pronóstico de Índice de salarios medios reales por obrero") +
+  guides(colour=guide_legend(title="Pronóstico"))
+```
+ 
+```{r}
+autoplot(window(ISMRO, start=2007)) +
+  autolayer(ISMRO5, series="Loess descomposition", PI=FALSE) +
+  xlab("Mes") + ylab("Índice base 2018=100") +
+  ggtitle("pronóstico de Índice de salarios medios reales por obrero") +
+  guides(colour=guide_legend(title="Pronóstico"))
+```
+ 
+ 
+```{r}
+autoplot(window(ISMRO, start=2007)) +
+  autolayer(ISMRO6, series="Exponencial Smoothing", PI=FALSE) + 
+  xlab("Mes") + ylab("Índice base 2018=100") +
+  ggtitle("pronóstico de Índice de salarios medios reales por obrero") +
+  guides(colour=guide_legend(title="Pronóstico"))
+```
+ 
+ 
+```{r}
+autoplot(window(ISMRO, start=2007)) +
+  autolayer(ISMRO7, series="Holt", PI=FALSE) + 
+  xlab("Mes") + ylab("Índice base 2018=100") +
+  ggtitle("pronóstico de Índice de salarios medios reales por obrero") +
+  guides(colour=guide_legend(title="Pronóstico"))
+```
+ 
+ 
+```{r}
+autoplot(window(ISMRO, start=2007)) +
+  autolayer(ISMRO8, series="Holt-Winters", PI=FALSE) + 
+  xlab("Mes") + ylab("Índice base 2018=100") +
+  ggtitle("pronóstico de Índice de salarios medios reales por obrero") +
+  guides(colour=guide_legend(title="Pronóstico"))
+```
+ 
+ 
+```{r}
+autoplot(window(ISMRO, start=2007)) +
+  autolayer(ISMRO9, series="cubic SPLine", PI=FALSE) + 
+  xlab("Mes") + ylab("Índice base 2018=100") +
+  ggtitle("pronóstico de Índice de salarios medios reales por obrero") +
+  guides(colour=guide_legend(title="Pronóstico"))
+```
+ 
+ 
+```{r}
+autoplot(window(ISMRO, start=2007)) +
+  autolayer(ISMRO10, series="Theta Method", PI=FALSE) +
+  xlab("Mes") + ylab("Índice base 2018=100") +
+  ggtitle("pronóstico de Índice de salarios medios reales por obrero") +
+  guides(colour=guide_legend(title="Pronóstico"))
+```
+ 
+ 
+ 
+ 702140 - 702160
+ 311 Industria alimentaria (Índice base 2018=100)
+Indicadores económicos de coyuntura > Encuesta mensual de la industria manufacturera (EMIM). Serie 2018 > Series Originales > Índice de personal ocupado > Índice > Índice de personal ocupado total
+```{r}
+inegi_id <- "702140"
+IPOAlim <- inegi_series(inegi_id, token, geography = "00", database = "BIE")
+IPOAlim <- ts_invert(IPOAlim)
+IPOAlim <- ts(IPOAlim, frequency = 12, start = c(2007,1))
+ts.plot(IPOAlim)
+```
+
+
+ 897
+ Total (Millones de dólares)
+Indicadores económicos de coyuntura > Balanza comercial de mercancías de México > Series originales > Saldo
+estacionaria
+
+
+
+<!--chapter:end:03-Filtros.Rmd-->
+
+---
+output:
+  pdf_document: default
+  html_document: default
+---
+# Modelos SARIMA
+
+
+## Fenómenos Estacionarios
+
+### Modelos AR
+
+Indicadores económicos de coyuntura > Tasas de ocupación, desocupación y subocupación (resultados mensuales de la ENOE, 15 años y más) > Series originales > Población total > Población ocupada > Por posición en la ocupación > Trabajadores por cuenta propia Clave:444568
+
+```{r}
+inegi_id <- "444568"
+TCP <- inegi_series(inegi_id, token, database = "BIE")
+TCP <- ts_invert(TCP)
+TCP <- ts(TCP, frequency = 12, start = c(2005,1))
+ts.plot(TCP)
+```
+
+
+Verificar que sea estacionaria 
+Contraste Aumentado de Dickey-Fuller
+```{r}
+library(tseries)
+adf.test(TCP, k=12)
+```
+
+
+```{r}
+par(mfrow=c(1,2))
+Acf(TCP)
+Pacf(TCP)
+```
+
+
+ARIMA(p,d,q)=ARIMa(1,0,0)
+```{r}
+library(forecast)
+m1 <- Arima(TCP, order = c(1,0,0))
+m1
+```
+```{r}
+ts.plot(TCP, m1$fitted, col=1:2)
+```
+
+
+```{r}
+summary(auto.arima(TCP, ic="bic"))
+```
+
+
+### Modelos MA
+Ocupación, empleo y remuneraciones > Tasas de ocupación, desocupación y subocupación (resultados mensuales de la ENOE, 15 años y más) > Urbana, agregado de 32 ciudades > Tasas complementarias > Tasa de ocupación en el sector informal 1 (TOSI1) > Total Clave:444803
+
+
+### Modelos ARMA
+
+Indicadores económicos de coyuntura > Balanza comercial de mercancías de México > Series originales > Saldo > Total Clave:897
+
+```{r}
+library(inegiR)
+inegi_id <- "897"
+AT <- inegi_series(inegi_id, token, database = "BIE")
+AT <- ts_invert(AT)
+AT <- ts(AT, frequency = 12, start = c(2005,1))
+ts.plot(AT)
+```
+
+
+Verificar que sea estacionaria 
+Contraste Aumentado de Dickey-Fuller
+```{r}
+library(tseries)
+adf.test(AT, k=4)
+```
+
+
+```{r}
+library(forecast)
+par(mfrow=c(1,2))
+Acf(diff(AT))
+Pacf(diff(AT))
+```
+
+
+ARIMA(p,d,q)=ARIMa(2,1,2)
+```{r}
+library(forecast)
+m1 <- Arima(AT, order = c(2,1,2))
+m1
+```
+
+
+## Fenómenos no estacionarios
+
+### Modelos integrados 
+
+### Modelos ARIMA
+
+Indicadores económicos de coyuntura > Índices de precios > Paridades de poder de compra para el Producto Interno Bruto de los países de la OCDE > Producto interno bruto > En moneda nacional a precios corrientes > Estados Unidos Clave:366709
+
+```{r}
+inegi_id <- "366709"
+PEA <- inegi_series(inegi_id, token, database = "BIE")
+PEA <- ts_invert(PEA)
+PEA <- ts(PEA, frequency = 1, start = c(2005,1))
+ts.plot(PEA)
+```
+
+
+Verificar que sea estacionaria 
+Contraste Aumentado de Dickey-Fuller
+```{r}
+library(tseries)
+adf.test(PEA, k=2)
+```
+
+```{r}
+plot(diff(PEA))
+```
+
+```{r}
+adf.test(diff(PEA), k=2)
+```
+```{r}
+adf.test(diff(diff(PEA)), k=2)
+```
+
+```{r}
+par(mfrow=c(1,2))
+Acf(PEA)
+Pacf(PEA)
+```
+
+
+ARIMA(p,d,q)=ARIMa(2,1,2)
+```{r}
+library(forecast)
+m1 <- Arima(PEA, order = c(2,1,2))
+m1
+```
+```{r}
+ts.plot(PEA, m1$fitted, col=1:2)
+```
+
+
+## Fenómenos con estacionalidad
+
+### Modelos estacionarios con estacionalidad
+
+
+#### Modelos SARMA
+
+Indicadores económicos de coyuntura > Encuesta mensual de la industria manufacturera (EMIM). Serie 2018 > Series Originales > Índices de remuneraciones medias reales por hora trabajada > Índice > Índice de remuneraciones medias reales por hora trabajada del personal dependiente de la razón social, considerando utilidades repartidas > 313 Fabricación de insumos textiles y acabado de textiles Clave:702286
+```{r}
+inegi_id <- "702286"
+AT <- inegi_series(inegi_id, token, database = "BIE")
+AT <- ts_invert(AT)
+AT <- ts(AT, frequency = 12, start = c(2005,1))
+ts.plot(AT)
+```
+
+
+Verificar que sea estacionaria 
+Contraste Aumentado de Dickey-Fuller
+```{r}
+library(tseries)
+adf.test(AT, k=12)
+```
+
+
+```{r}
+par(mfrow=c(1,2))
+Acf(AT)
+Pacf(AT)
+```
+
+
+
+### Modelos no estacionarios con estacionalidad
+
+
+#### Modelos SARIMA
+Indicadores económicos de coyuntura > Producto interno bruto trimestral, base 2018 > Series Originales > Valores a precios de 2018 > Actividades primarias > 11 Agricultura, cría y explotación de animales, aprovechamiento forestal, pesca y caza Clave:735882
+Paso 1 Verificar que sea estacionario en niveles
+```{r}
+inegi_id <- "735882"
+PEA <- inegi_series(inegi_id, token, database = "BIE")
+PEA <- ts_invert(PEA)
+PEA <- ts(PEA, frequency = 12, start = c(2005,1))
+ts.plot(PEA)
+```
+
+
+Verificar que sea estacionaria 
+Contraste Aumentado de Dickey-Fuller
+```{r}
+library(tseries)
+adf.test(PEA, k=12)
+```
+
+```{r}
+plot(diff(PEA))
+```
+
+```{r}
+adf.test(diff(PEA), k=12)
+```
+```{r}
+par(mfrow=c(1,2))
+Acf(diff(PEA))
+Pacf(diff(PEA))
+```
+
+
+ARIMA(p,d,q)=ARIMa(2,1,2)
+```{r}
+library(forecast)
+m1 <- Arima(PEA, order = c(2,1,2))
+m1
+```
+```{r}
+ts.plot(PEA, m1$fitted, col=1:2)
+```
+
+
+```{r}
+summary(auto.arima(PEA, ic="bic"))
+```
+
+
+```{r}
+inegi_id <- "736412"
+ener <- inegi_series(inegi_id, token, database = "BIE")
+tail(ener)
+ener <- ts_invert(ener)
+ener <- ts(ener, frequency = 12, start = c(1993,1)) 
+ts.plot(ener)
+
+```
+Paso 1) análisis gráfico
+paso 2) PRUERBA de Raíces unitarias ADF y correlogramas
+Tiene tendencia, estacionalidad
+```{r}
+adf.test(ener)
+```
+Por lo tanto, la variable ener no es estacionaria
+
+Vamos a inspeccionar los correlogramas
+
+```{r}
+Acf(ener)
+```
+
+```{r}
+Pacf(ener)
+```
+
+paso 3) aplicamos primeras diferencias
+
+```{r}
+dener <- diff(ener)
+ts.plot(dener)
+```
+
+```{r}
+adf.test(dener)
+```
+```{r}
+Acf(dener)
+```
+
+```{r}
+Pacf(dener)
+```
+
+
+Modelar parte no estacional 
+
+```{r}
+m1 <-Arima(ener, order = c(2,1,2))
+summary(m1)
+```
+
+
+```{r}
+ts.plot(ener, m1$fitted, col=1:2)
+```
+
+```{r}
+m2 <-Arima(ener, order = c(2,1,2), seasonal = c(1,1,0), lambda = 0)
+summary(m2)
+```
+
+```{r}
+ts.plot(ener, m2$fitted, col=1:2)
+```
+
+
+
+```{r}
+plot(forecast(m2))
+```
+
+
+```{r}
+inegi_id <- "746097"
+pib <- inegi_series(inegi_id, token, database = "BIE")
+tail(pib)
+pib <- ts_invert(pib)
+pib <- ts(pib, frequency = 1, start = c(2003)) 
+ts.plot(pib)
+```
+
+```{r}
+adf.test(pib)
+```
+```{r}
+dpib <- diff(pib)
+ts.plot(dpib)
+```
+
+```{r}
+adf.test(dpib, k=2)
+```
+
+```{r}
+ddpib<- diff(dpib)
+ts.plot(ddpib)
+```
+
+```{r}
+adf.test(ddpib, k=2)
+```
+```{r}
+Acf(pib)
+```
+
+```{r}
+Pacf(pib)
+```
+
+
+```{r}
+par(mfrow=c(1,2))
+Acf(pib)
+Pacf(pib)
+```
+
+ARIMA(1,0,0)
+ARIMa(1,0,3)
+ARIMa(1,1,0)
+ARIMa(1,2,0)}
+ARIMA(1,1,3)
+ARIMA(1,2,3)
+
+```{r}
+library(broom)
+m1<- Arima(pib, order=c(1,0,0))
+gm1 <- glance(m1)
+AIC1 <- gm1$AIC
+ts.plot(pib,m1$fitted, col=1:2)
+```
+
+```{r}
+m2<- Arima(pib, order=c(1,0,3))
+gm2 <- glance(m2)
+AIC2 <- gm2$AIC
+m3<- Arima(pib, order=c(1,1,0))
+gm3 <- glance(m3)
+AIC3 <- gm3$AIC
+m4<- Arima(pib, order=c(1,1,3))
+gm4 <- glance(m4)
+AIC4 <- gm4$AIC
+m5<- Arima(pib, order=c(1,2,0))
+gm5 <- glance(m5)
+AIC5 <- gm5$AIC
+m6<- Arima(pib, order=c(1,2,3))
+gm6 <- glance(m6)
+AIC6 <- gm6$AIC
+AICS<-data.frame(c("m1", "m2", "m3", "m4", "m5", "m6"),
+           c(AIC1, AIC2, AIC3, AIC4, AIC5, AIC6))
+colnames(AICS) <- c("modelo", "AIC")
+AICS
+```
+```{r}
+ts.plot(pib,m1$fitted,
+        m2$fitted,
+        m3$fitted,
+        m4$fitted,
+        m5$fitted,
+        m6$fitted,
+        col=1:7)
+
+```
+
+655561
+Ocupación, empleo y remuneraciones > Indicadores de competitividad laboral > Salarios en México por subsector de actividad en la industria manufacturera > Mensual > 336 Fabricación de equipo de transporte
+```{r}
+inegi_id <- "655561" 
+trans <- inegi_series(inegi_id, token, database = "BIE")
+tail(trans)
+trans <- ts_invert(trans)
+trans <- ts(trans, frequency = 12, start = c(2018,1)) 
+ts.plot(trans)
+```
+
+```{r}
+adf.test(trans, k=12)
+```
+```{r}
+dtrans<- diff(trans)
+ts.plot(dtrans)
+```
+```{r}
+adf.test(dtrans, k=12)
+```
+```{r}
+adf.test(diff(dtrans),k=12)
+ddtrans<- diff(dtrans)
+ts.plot(ddtrans)
+```
+
+```{r}
+par(mfrow=c(1,2))
+Acf(ddtrans)
+Pacf(ddtrans)
+```
+
+SARIMA(4,2,1)(1,0,2)
+SARIMA(0,2,1)(1,0,2)
+SARIMA(3,2,1)(1,0,2)
+SARIMA(2,2,1)(1,0,2)
+
+```{r}
+m1 <- Arima(trans, order = c(0,2,1), seasonal = c(1,1,2))
+m2 <- Arima(trans, order = c(3,2,1), seasonal = c(1,1,2))
+m3 <- Arima(trans, order = c(2,2,1), seasonal = c(1,1,2))
+
+ts.plot(trans, m1$fitted, m2$fitted,m3$fitted, col=1:4)
+```
+
+
+```{r}
+gm1 <- glance(m1)
+AIC1 <- gm1$AIC
+gm2 <- glance(m2)
+AIC2 <- gm2$AIC
+gm3 <- glance(m3)
+AIC3 <- gm3$AIC
+c(AIC1, AIC2, AIC3)
+
+```
+
+```{r}
+plot(forecast(m2))
+```
+
+
+
+
+
+
+<!--chapter:end:04-SARIMA.Rmd-->
+
+# Final Words
+
+We have finished a nice book.
+
+<!--chapter:end:05-summary.Rmd-->
+
+`r if (knitr:::is_html_output()) '
+# References {-}
+'`
+
+<!--chapter:end:06-references.Rmd-->
+
