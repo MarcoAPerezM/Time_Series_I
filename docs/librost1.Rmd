@@ -1,8 +1,12 @@
 ---
-title: "Notas de Curso"
-subtitle: "Series de Tiempo I"
+title: "Series de Tiempo I--Notas de Curso"
+subtitle: "Universidad Autónoma Metropolitana"
 author: "Marco Antonio Pérez-Méndez"
-date: "`r Sys.Date()`"
+email: "mperez.mendez@izt.uam.mx"
+affiliation: "Universidad Autónoma Metropolitana"
+url: "https://github.com/MarcoAPerezM"
+affiliation_url: "https://sites.google.com/view/deserlab/"
+date: "2024"
 output: 
   html_document:
     toc: true
@@ -26,7 +30,11 @@ knitr::write_bib(c(
 ), 'packages.bib')
 ```
 
+email: mperez.mendez@izt.uam.mx
 
+url: https://github.com/MarcoAPerezM
+
+url_lab: https://sites.google.com/view/deserlab/
 
 
 <!--chapter:end:index.Rmd-->
