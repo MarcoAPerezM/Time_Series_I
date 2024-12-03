@@ -84,6 +84,7 @@ Para abrir datos en Excel se debe emplear la función read_excel() perteneciente
 Una manera mucho mas eficiente y moderna de obtener datos es descargarlos directamente desde repositorios oficiales en donde se encuentran los datos. Por ejemplo, la libreria Quantmod (<https://www.quantmod.com>. Quantitative Financial Modelling and Trading Framework for R)  brinda acceso a las bases de datos de Google, Yahoo, oanda y la FRED (Federal Reserve of Economic Data).
 
 Por ejemplo, por medio de la librería getFX() es posible descargar el tipo de cambio del peso mexicano contra el dolar estadounidense desde oanda:
+
 ```{r}
 library(quantmod)
 getFX("USD/MXN")
@@ -91,18 +92,21 @@ plot(USDMXN)
 ```
 
 o el rublo ruso contra el dolar estadounidense:
+
 ```{r}
 getFX("USD/RUB")
 plot(USDRUB)
 ```
 
 o el precio del oro en relación con el dolar estadounidense:
+
 ```{r}
 getFX("XAU/USD")
 plot(XAUUSD)
 ```
 
 Con la función getSymbols() se puede desarcargar el Bitcoin desde la FRED, sólo basta con identificar la clave de la variable de interés, en este caso "CBBTCUSD":
+
 ```{r}
 getSymbols("CBBTCUSD", src = "FRED") #source = src
 plot(CBBTCUSD)
@@ -130,15 +134,20 @@ inegi_id <- "735879"
 pib <- inegi_series(inegi_id, token, database = "BIE")
 ```
 
+
 Como puede observarse, por medio de la función plot(), la descarga se realiza con el orden inverso, la tabla se encuentra ordenada de los valores más actuales a los más antiguos.
+
 ```{r}
 plot(pib$values, type="l")
 ```
+
 Es necesario verificar la primer fecha de publicación de la variable y la frecuencia con la que se repite dentro de un año. 
 
 ```{r}
 tail(pib)
 ```
+
+
 Como puede observarse, la fecha de inicio es el primer trimestre de 1980. Es necesario invertir el orden, para ello diseñamos una función que cambie el orden de acuerdo a la fecha y mantenga solo la columna de valores. A esta función personalizada la hemos llamado ts_invert().
 
 ```{r}
@@ -147,13 +156,18 @@ ts_invert <- function(x){
   x <- x$values
 }
 ```
+
+
 Al aplicar esta función personalzida sobre la variable pib tenemos el orden adecuado
 
 ```{r}
 pib <- ts_invert(pib)
 plot(pib, type="l")
 ```
+
+
 Ahora es necesario transformar la variable en una serie de tiempo. Para ello usamos la función ts() la cual permite identificar la fecha de inico y la frecuencia. En este caso, la variable pib se transformará en una serie de tiempo que inicia en el primer trimestre de 1980 y tiene frecuencia 4, ya que es trimestral. 
+
 ```{r}
 pib <- ts(pib, frequency = 4, start =c(1980,1) )
 ts.plot(pib)
@@ -212,6 +226,7 @@ ema_1
 ```
 
 Construimos funciones personalizadas para cada indicador.
+
 ```{r}
 ema <- function(x){
   l <- length(x)
@@ -335,6 +350,7 @@ ts_precision(error1,y,type="ecm")
 ### Función conjunta
 
 Construimos una función que además de calcular todos los indicadores de precisión, los pone en una tabla comparativa.
+
 ```{r}
 ts_precision_all <- function(x,y){
   ema <- ts_precision(x,y,type="ema")
@@ -440,11 +456,15 @@ $$\hat{y_t}=\hat{\alpha}+\hat{\beta} t $$
 lm(INPC~tiempo)
 ```
 
+
 El resumen estadístico del modelo se imprime con la función _summary_
+
+
 ```{r}
 mod0 <- lm(INPC~tiempo)
 summary(mod0)
 ```
+
 
 A partir del resumen estadístico del modelo de tendencia lineal se pueden almacenar los coeficientes de la regresión.
 
