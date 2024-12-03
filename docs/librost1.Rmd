@@ -421,7 +421,7 @@ En el contexto de las series de tiempo, el componente irregular se identifica co
 
 $$Y_t =\alpha + \beta t+a_t $$
 
-Para modelar la tendencia, es necesario construir la variable tiempo
+Para modelar la tendencia, es necesario construir la variable _tiempo_
 
 ```{r}
 tiempo <- time(INPC)
