@@ -409,6 +409,7 @@ ts.plot(INPC)
 ```
 
 
+
 Como se puede apreciar, hay una línea con pocas variaciones. De manera tal que podemos plantear un modelo matemático que incluya la tendencia lineal $T_t$ y el componente irregular $I_t$.
 
 $$ Y_t = f(t_t, I_t)$$
