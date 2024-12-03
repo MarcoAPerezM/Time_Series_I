@@ -457,7 +457,7 @@ lm(INPC~tiempo)
 ```
 
 
-El resumen estadístico del modelo se imprime con la función _summary_
+El resumen estadístico del modelo se imprime con la función _summary()_
 
 
 ```{r}
@@ -493,7 +493,7 @@ library(forecast)
 
 Construimos la tendencia lineal con los coeficientes y la trasnformamos a serie de tiempo con la temporalidad y la frecuencia de la variable observada y construimos el prónóstico para un horizonte temporal de cinco momentos en el futuro.
 
-Al imprimir el pronóstico se precia el valor estimado del valor futuro, así como sus intervalos de confianza con 80% y 90% de confianza. 
+Al imprimir el pronóstico se precia el valor estimado del valor futuro, así como sus intervalos con 80% y 90% de confianza. 
 
 ```{r}
 tendenciaL <- ts(a+b*tiempo, frequency = 12, start = c(1994,1))
@@ -503,9 +503,12 @@ pronostico
 
 
 Adicionalmente se puede graficar el pronóstico de la tendencia junto con la tendencia histórica
+
 ```{r}
 plot(forecast(tendenciaL))
 ```
+
+Una manera mucho mas atractiva de mostrar los resultados es por medio de la función _autoplot()_ de la librería _forecast_ y las opciones gráficas de la librería _ggplot2_
 
 ```{r}
 library(forecast)
