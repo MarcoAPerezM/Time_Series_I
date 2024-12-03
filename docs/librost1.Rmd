@@ -508,7 +508,8 @@ Adicionalmente se puede graficar el pronóstico de la tendencia junto con la ten
 plot(forecast(tendenciaL))
 ```
 
-Una manera mucho mas atractiva de mostrar los resultados es por medio de la función _autoplot()_ de la librería _forecast_ y las opciones gráficas de la librería _ggplot2_
+Una manera mucho mas atractiva de mostrar los resultados es por medio de la función _autoplot()_ de la librería _forecast_ y las opciones gráficas de la librería _ggplot2_.
+
 
 ```{r}
 library(forecast)
