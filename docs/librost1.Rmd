@@ -528,12 +528,12 @@ autolayer(fit1, series="Tendencia lineal") +
 
 
 
-Del modelo se desprende que, _caeteris paribus_, el incremento mensual del Índice Nacional de Precios al Consumidor es de `r b` y cuenta con un intercepto de `r a`
+Del modelo se desprende que, _caeteris paribus_, que el incremento mensual del Índice Nacional de Precios al Consumidor es de `r b` y cuenta con un intercepto de `r a`
 
 
 ### Tendencia cuadrática
 
-Modelar una tendencia que , en principio, parece ser cuadrática. La variable es la Tasa de condiciones críticas de ocupación (TCCO) (Porcentaje), cuyo identificador es 444608. La tasa de condiciones críticas de ocupación representa el segmento de la población económicamente activa que cuenta con alguna de las siguientes características: 
+Se puede modelar una tendencia que, en principio, parece ser cuadrática. La variable en cuestión es la **Tasa de condiciones críticas de ocupación (TCCO)** (Porcentaje), cuyo identificador es 444608. La tasa de condiciones críticas de ocupación representa el segmento de la población económicamente activa que cuenta con alguna de las siguientes características: 
 
 1) Población que trabaja menos de 35 horas a la semana
 2) Población que trabaja mas de 35 horas a la semana y recibe hasta un salario mínimo. 
@@ -550,11 +550,13 @@ ts.plot(TCCO)
 
 $$y_t=\beta_0+\beta_1 t+ \beta_3 t^2 +\epsilon_t$$
 
+Se debe, al igual que el ejercicio anterior sobre tendencia lineal, construir la variable del tiempo. Además, como la variable, aparentemente, muestra una tendencia cuadrática se debe generar el tiempo al cuadrado. Con ambas variables del tiempo se construye un modelo de regresión. Tenemos dos opciones, con la función _lm()_ en la que se incluye, como variables independientes, al tiempo y al tiempo al cuadrado. O por medio de la función _tslm()_ que permite capturar este fenómeno con la instrucción *trend*. 
+Al momento de correr el modelo se obtienen los coeficientes estimados, lo cuales permiten construir una variable de tendencia. 
 
 ```{r}
 tiempo <- time(TCCO)
 tiempo2 <- tiempo^2
-mod1 <- tslm(TCCO~tiempo+tiempo2)
+mod1 <- lm(TCCO~tiempo+tiempo2)
 mod1a<- tslm(TCCO~trend+I(trend^2))
 b0<-coef(mod1)[[1]]
 b1<-coef(mod1)[[2]]
@@ -563,10 +565,14 @@ tendenciaC <- b0+b1*tiempo+b2*tiempo2
 plot(tendenciaC, col="aquamarine2")
 ```
 
+Para comparar el ajuste entre el fenómeno observado y la tendencia estimada se corre un _ts.plot()_.
 
 ```{r}
 ts.plot(TCCO, tendenciaC, col=1:2)
 ```
+
+Como resultado final, es posible obtener un pronóstico para los siguientes 12 meses, ya que la variable es mensual. 
+
 ```{r}
 plot(forecast(mod1a, h=12))
 ```
@@ -574,7 +580,7 @@ plot(forecast(mod1a, h=12))
 
 ### Tendencia Cúbica
 
-Tasa de ocupación parcial y desocupación 1 (TOPD1) (Porcentaje), con identificador 444604. La tasa de ocupación parcial y desocupación es el porcentaje de la población económicamente activa que se encuentra desocupada, más la ocupada que trabajó menos de 15 horas en la semana.
+En el caso de una variable con tendencia cúbica, se usa la **Tasa de ocupación parcial y desocupación 1 (TOPD1)** (Porcentaje), con identificador 444604. La tasa de ocupación parcial y desocupación es el porcentaje de la población económicamente activa que se encuentra desocupada, más la ocupada que trabajó menos de 15 horas en la semana.
 
 
 ```{r}
@@ -606,9 +612,12 @@ tendencia <- b0+b1*tiempo+b2*tiempo2+b3*tiempo3
 ts.plot(TOPD1, tendencia, col=1:2)
 
 ```
+
+
 ```{r}
 forecast(tendencia, h=5)
 ```
+
 
 ```{r}
 plot(forecast(tendencia, h=12))
@@ -621,8 +630,10 @@ plot(forecast(mod3a, h=12))
 
 
 ### Tendencia Polinomial
-Tasa de presión general (TPRG) (Porcentaje),  444605
-polinomial
+
+Tasa de presión general (TPRG) (Porcentaje), mide el porcentaje que representa la población desocupada abierta y los ocupados que buscan trabajo con el propósito de cambiarse o tener un empleo adicional con respecto a la Población Económicamente Activa. Su identificador en el BIE es 444605. Esta es una variable que, dadas sus características, se puede modelar con una tendencia polinomial. 
+
+
 ```{r}
 inegi_id <- "444605"
 TPRG <- inegi_series(inegi_id, token, database = "BIE")
@@ -660,8 +671,9 @@ plot(forecast(mod4a, h=12))
 
 ### Tendencia exponencial
 
+La recaudación de impuestos a nivel nacional identificada como parte de los ingresos y egresos brutos de las finanzas públicas se puede modelar de forma exponencial. Su ubicación en el BIE es Finanzas públicas > Ingresos y egresos brutos por entidad federativa > Nacional 31 entidades federativas (no incluye Ciudad de México) > Ingresos > Impuestos y cuenta con la clave: 441566.
 
-Finanzas públicas > Ingresos y egresos brutos por entidad federativa > Nacional 31 entidades federativas (no incluye Ciudad de México) > Ingresos > Impuestos Clave:441566
+
 ```{r}
 inegi_id <- "441566"
 impuestos <- inegi_series(inegi_id, token, database = "BIE")
@@ -698,6 +710,21 @@ plot(forecast(mod5a, h=4))
 
 ### Curvas de crecimiento
 
+Los incrementos en número de contagios de covid-19, a nivel global, sugieren que el patrón subyacente se comporta como algún proceso de crecimiento poblacional. Estos procesos, aunque son muy recurrentes en sistemas complejos aplicados a curvas de aprendizaje y, fundamentalmente, en un gran número de procesos naturales, se caracterizan por seguir una progresión bien definida con valores relativamente bajos al inicio, muy acelerados en la parte intermedia, y llegando a un clímax en la parte alta. La característica fundamental de este tipo de modelos es que muestran un comportamiento gráfico similar a una “S”, por lo que se identifican como funciones sigmoides y su función más conocida es la función logística, la cual se debe al aporte de Verhulst (1938) quien potenció el análisis poblacional de Malthus. Sin embargo, la función logística tiene dos características sumamente restrictivas: la primera es que, empíricamente, se ha observado que existen procesos que no alcanzan su mayor tasa de crecimiento justo a la mitad del periodo de crecimiento; segundo, derivado de la observación anterior, momento en el que se espera el punto de inflexión no corresponde con la mitad del tiempo de reproducción. 
+
+Por ello, es necesario el uso de una función más general que el caso simple de Verhulst. La función que se emplea es, al igual que la logística, una función sigmoide de tipo Gompertz, la cual  se debe a Benjamin Gompertz (1925) quien publicó un artículo titulado _"On the Nature of the Function Expressive of the Law of Human Mortality"_. Este tipo de función cuenta con 3 bondades sobre la de Verhulst: 1) es un proceso aplicado, originalmente, a las tasas de mortalidad humana; 2) pertenece a la familia de funciones logísticas generalizadas o curvas de Richards, siendo un caso particular de ellas y; 3) en términos empíricos es mucho más eficiente pues los parámetros permiten una gran versatilidad. El modelo de crecimiento de Gompertz ha sido ampliamente utilizado en crecimiento poblacional de ciudades, en biología ha sido empleado en crecimiento poblacional de animales y plantas, y en estimaciones del volumen de ciertas bacterias y células cancerígenas. 
+
+El proceso subyacente de los contagios por covid-19 en México, ya que es un virus que se contagia entre humanos, se modela como una curva de crecimiento tipo Gompertz de la siguiente manera:
+
+$$y_t=Ae^{-e^{-\left(\frac{t-b}{c}\right)}} $$
+
+donde $Y=$ número de contagios
+	    $A=$ parámetro de valor asintótico
+	    $b=$ parámetro de desplazamiento de la curva
+	    $c=$ parámetro de la tasa de crecimiento
+	    $t=$ tiempo
+
+
 ```{r echo=FALSE}
 library(readr)
 mexicoc <- read_csv("~/Documents/libros/STI/covid/covid.csv")
@@ -711,6 +738,8 @@ dias2 <- seq(1,387,1)
 totales2 <- mexicoc$totales[1:387]
 datos2 <-data.frame(dias2, totales2)
 ```
+
+La estimación de los parámetros A,b y c se realiza por medio de un modelo de regresión de mínimos cuadrados no lineales. El modelo, al estimarse por medio de un proceso iterativo de convergencia con ajuste paramétrico da como resultado:
 
 
 ```{r}
@@ -743,6 +772,8 @@ totales3 <- c(contagiados[1:length(mexicoc)])
 datos3 <-data.frame(dias3, totales3)
 ```
 
+
+
 ```{r}
 library(ggplot2)
 ggplot(g, aes(x = f, y = contagiados, colour = "Curva Gompertz") ) +
@@ -764,14 +795,16 @@ ggplot(g, aes(x = f, y = contagiados, colour = "Curva Gompertz") ) +
 
 ## Estacionalidad
 
+El segundo componente subyacente es la estacionalidad. La estacionalidad es el comportamiento de corto plazo que se puede atribuir a momentos específicos y es facilmente identificable. Normalmente se aprecia en datos con temporalidad menor a un año.
+
+Existen dos tipos de estacionalidad, la aditiva y la multiplicativa. 
+
 ### Estacionalidad aditiva
 
-Comportamiento que se presenta de manera regular y sistemática 
-
-737124
- 112 Cría y explotación de animales (Índice base 2018=100)
-Indicadores económicos de coyuntura > Indicador global de la actividad económica, base 2018 > Series originales > Índice de volumen físico > Actividades primarias
-estacionalidad aditiva
+Comportamiento que se presenta de manera regular y sistemática con impulsos de la misma, o similar, margnitud. 
+En este caso, el índice de volumen físico de la cría y explotación de animales como indicador global de la actividad económica de actividades primarias nos permite evaluar la presencia de estacionalidad aditiva. El identificador de la variable en el BIE es: 737124
+ 
+ 
 ```{r}
 inegi_id <- "737124"
 IVFEA <- inegi_series(inegi_id, token, database = "BIE")
@@ -780,7 +813,9 @@ IVFEA <- ts(IVFEA, frequency = 12, start = c(1993,1))
 ts.plot(IVFEA)
 ```
 
-Seasonal Plot:
+Como se puede apreciar en el gráfico anterior, hay picos y valles que se presentan de manera regular a lo largo del tiempo en el que se captura la variable. Ese es el primer indicio de la presencia de estacionalidad. Para corroborar su presencia es necesario emplear algunos otros elementos gráficos de análisis. 
+
+El gráfico estacional o _Seasonal Plot_ nos permite evaluar, al interior de un año, el efecto mensual de las estaciones que se presentan a lo largo del año. Si no hubiera efecto estacional no se apreciarían picos regulares en los mismos meses. 
 
 ```{r}
 library(ggplot2)
@@ -790,7 +825,7 @@ ggseasonplot(IVFEA, year.labels=TRUE, year.labels.left=TRUE) +
   xlab("Mes")
 ```
 
-Polar Seasonal Plot:
+Otra herramienta similar el esl gráfico polar estacional o _Polar Seasonal Plot_, a diferencia del anterior, si no hubiera estacionalidad entonces se apreciaría un espiral concéntrico. En la medida en la que e espiral se deforma en meses específicos, es un indicio de que en dicho mes se da un efecto estacional. 
 
 ```{r}
 ggseasonplot(IVFEA, polar=TRUE) +
@@ -799,7 +834,8 @@ ggseasonplot(IVFEA, polar=TRUE) +
   xlab("Mes")
 ```
 
-Subseries Plot:
+EL gráfico de subseries estacionales o _Subseries Plot_ permite identificar los meses en los que se dá el mayor impacto estacional.
+
 ```{r}
 ggsubseriesplot(IVFEA) +
   ylab("Índice base 2018=100") +
@@ -807,7 +843,8 @@ ggsubseriesplot(IVFEA) +
   xlab("Mes")
 ```
 
-Lag plots
+El gráfico de rezagos estacionales o _Lag plots_ es muy útil para identificar la fuerza de la estacionalidad. Los colores indican el mes en el eje vertical. Las líneas conectan puntos en orden cronológico. La relación es fuertemente positiva en los rezagos en los que se alejan de la recta de 45°
+
 
 ```{r}
 ivfea <- window(IVFEA, start=1993)
@@ -816,9 +853,6 @@ gglagplot(ivfea)
 ```
 
 
-Here the colours indicate the quarter of the variable on the vertical axis. The lines connect points in chronological order. The relationship is strongly positive at lags 4 and 8, reflecting the strong seasonality in the data. The negative relationship seen for lags 2 and 6 occurs because peaks (in Q4) are plotted against troughs (in Q2)
-
-The window() function used here is very useful when extracting a portion of a time series. In this case, we have extracted the data from ausbeer, beginning in 1992.
 ```{r}
 library(forecast)
 dummies <- seasonaldummy(IVFEA)
