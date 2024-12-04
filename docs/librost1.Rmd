@@ -843,7 +843,7 @@ ggsubseriesplot(IVFEA) +
   xlab("Mes")
 ```
 
-El gráfico de rezagos estacionales o _Lag plots_ es muy útil para identificar la fuerza de la estacionalidad. Los colores indican el mes en el eje vertical. Las líneas conectan puntos en orden cronológico. La relación es fuertemente positiva en los rezagos en los que se alejan de la recta de 45°
+El gráfico de rezagos estacionales o _Lag plots_ es muy útil para identificar la fuerza de la estacionalidad. Los colores indican el mes en el eje vertical. Las líneas conectan puntos en orden cronológico. La relación es fuertemente positiva en los rezagos en los que se alejan de la recta de 45°.
 
 
 ```{r}
