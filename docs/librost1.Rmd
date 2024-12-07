@@ -1,22 +1,25 @@
 ---
 title: "Series de Tiempo I--Notas de Curso"
-subtitle: "Universidad Autónoma Metropolitana"
 author: "Marco Antonio Pérez-Méndez"
-email: "mperez.mendez@izt.uam.mx"
-affiliation: "Universidad Autónoma Metropolitana"
-url: "https://github.com/MarcoAPerezM"
-affiliation_url: "https://sites.google.com/view/deserlab/"
-date: "2024"
-output: 
+date: '2024'
+output:
   html_document:
-    toc: true
+    toc: yes
     toc_depth: 3
     toc_float:
-      collapsed: true
-      smooth_scroll: true
-    number_sections: true
+      collapsed: yes
+      smooth_scroll: yes
+    number_sections: yes
     theme: sandstone
     highlight: tango
+  pdf_document:
+    toc: yes
+    toc_depth: '3'
+affiliation: Universidad Autónoma Metropolitana
+url: https://github.com/MarcoAPerezM
+affiliation_url: https://sites.google.com/view/deserlab/
+subtitle: Universidad Autónoma Metropolitana
+email: mperez.mendez@izt.uam.mx
 ---
 
 ```{r setup, include=FALSE}
@@ -852,6 +855,26 @@ gglagplot(ivfea)
 
 ```
 
+La manera adecuada de incorporar el efecto estacional es por medio de la modeliazación a traves de variables dicotómicas que capturen los periodos reflejados en la temporalidad de la variable. Por ejemplo, si la variable tiene una temporalidad mensual, entonces se deben construir variables cualitativas que midan la presencia de cada uno de los meses. 
+
+Así, la variable dicotómica o variable dummy toma dos valores, 0 y 1. 1 cuando el dato se presenta en el mes indicado y 0 en cualquier otro caso. 
+
+$$D_s \in\{0,1\} $$
+El componente estacional $S_t$ se incorpora por medio de la adición de los elementos al modelo general. 
+
+$$ y_t= T_t+S_t+C_t+I_t$$
+
+En particular, el componente estacional estima, por medio del modelo econométrico, los coeficientes asociados a cada observación estacional. 
+
+$$S_t = \delta_1 D_1 + \delta_2D_2+...+\delta_sD_s$$
+tommando como s al numero de periodos observados en la temporalidad dentro de un año. 
+
+Así para un modelo con estacionalidad se tiene que  
+
+$$y_t= S_t = \delta_1 D_1 + \delta_2D_2+...+\delta_sD_s$$
+$$y_t= S_t = \Sigma_i^s\delta_i D_i$$
+
+La incorporación de las variables dummy se consigue por medio de la función _seasonaldummy()_ perteneciente a la librería *forecast*
 
 ```{r}
 library(forecast)
@@ -859,20 +882,35 @@ dummies <- seasonaldummy(IVFEA)
 head(dummies)
 
 ```
+
+
+Si se construye un modelo de regresión que incluya las variables estacionales.  El modelo resutante estima, para el caso del Índice de Volumen Físico de actividades primarias en cría y explotación de animales la temporalidad es mensual, por lo que se estiman 11 coefiecientes asociados con cada mes de observación y el intercepto. Como podrá recordar recordar de cursos prevíos de econometría, el uso de variables dummy requiere eliminar de la estimación al menos una de las variables cualitativas para evitar problemas de multicolinealidad perfecta. 
+
 ```{r}
 m6 <- lm(IVFEA~dummies)
-plot(m6$fitted.values, type="l")
 ```
+
+Con esto se consigue la estimación que cada mes le imprime al fenómeno en cuestión. La represenación se reproduce en el siguiente gráfico: 
+
+```{r}
+plot(m6$fitted.values, type="l")
+
+```
+
+Al gráficar el valor estimado y el observado  se aprecia que al valor estimado no se ajusta al valor observdo. El modelo está mal especificado, pues le falta la incorporación de la tendencia. 
 
 ```{r}
 ts.plot(IVFEA, m6$fitted.values, col=1:2)
 ```
+
+Si se incluye una tendnecia, en principio, lineal el valor estimado se ajusta mucho mejor al observado, lo que sugiere que este variable se debe modelar con tendencia y estacionalidad aditiva. Acontinuación se muestra una manera alterna de modelar este fenómeno. Se sustituye la función _lm()_ por _tslm()_. Está función permite modelar de manera directa los componentes de tendencia y estacionalidad y permite ajustar de manera directa el pronóstico.  
 
 ```{r}
 m6a <- tslm(IVFEA~ trend + season)
 ts.plot(IVFEA, m6a$fitted.values, col=1:2)
 ```
 
+Con esto, se consigue un pronóstico que, además de capturar el fenómeno estacional y tendencial, muestra intervalos de confianza muy estrechos. 
 
 ```{r}
 plot(forecast(m6a, h=12))
@@ -880,11 +918,10 @@ plot(forecast(m6a, h=12))
 
 ### Estacionalidad multiplicativa
 
- 737123
- 111 Agricultura (Índice base 2018=100)
-Indicadores económicos de coyuntura > Indicador global de la actividad económica, base 2018 > Series originales > Índice de volumen físico > Actividades primarias
-estacionalidad multiplicativa
-
+ El otro tipo de estacionalidad es la multiplicativa. Esta, a diferencia de la aditiva, muestra un comportamiento creciente a lo largo del tiempo. 
+ 
+ Para representar el fenómeno se emplea el indicador global de la actividad económica para actividades primarias. El índice de volumen físico de la agricultura con identificador: 737123.
+ 
 ```{r}
 inegi_id <- "737123"
 IVFAgr <- inegi_series(inegi_id, token, database = "BIE")
@@ -893,26 +930,42 @@ IVFAgr <- ts(IVFAgr, frequency = 12, start = c(1993,1))
 ts.plot(IVFAgr)
 ```
  
+Si se procede de la misma manera que en el caso anterior, el resultado es el siguiente:
+
 ```{r}
 tiempo<- time(IVFAgr)
 dummies <- seasonaldummy(IVFAgr)
 mod7 <- lm(IVFAgr~tiempo+dummies)
 summary(mod7)
 ```
+
+Como se puede apreciar, el ajuste no es el adecuado, al inicio del fenómeno se sobre estima la variable y en la parte final se subestima, justo porque no se captura el efecto multiplicativo de la estacionalidad. 
+
 ```{r}
 ts.plot(IVFAgr, mod7$fitted.values, col=1:2)
 ```
 
+Lo adecuado es modelar el efecto multiplicativo con la transformación adecuada. 
+
+$$y_t = T_t*S_t*I_t $$
+$$ln(y_t)=T_t+S_t+I_t $$
+
+Por lo tanto, la estimación queda de la siguiente manera:
 
 ```{r}
 mod7a <- lm(log(IVFAgr)~tiempo+dummies)
 summary(mod7a)
 ```
 
+EL ajuste entre la variable observada y estimada queda como sigue:
+
 
 ```{r}
 ts.plot(IVFAgr, exp(mod7a$fitted.values), col=1:2)
 ```
+
+
+
 lambda= Box-Cox transformation parameter. If lambda="auto", then a transformation is automatically selected using BoxCox.lambda. The transformation is ignored if NULL. Otherwise, data transformed before model is estimated.
 ```{r}
 mod7b <- tslm(IVFAgr~trend+season, lambda = -0.6)
@@ -1749,6 +1802,7 @@ ts.plot(dtrans)
 ```{r}
 adf.test(dtrans, k=12)
 ```
+
 ```{r}
 adf.test(diff(dtrans),k=12)
 ddtrans<- diff(dtrans)
